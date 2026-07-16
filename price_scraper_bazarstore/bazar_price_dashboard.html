@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bazar Price Board — Jan–Jul 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --board:#22261f;
+    --board-2:#282d24;
+    --chalk:#f0ece0;
+    --chalk-dim:#b9b6a9;
+    --rail:#4b4536;
+    --up:#e2665a;      /* price rose = chalk red */
+    --down:#7fbf7a;    /* price fell = chalk green */
+    --flat:#8d9184;
+    --amber:#e0b94a;   /* market tag yellow */
+    --amber-dim:#8a723a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(224,185,74,0.07), transparent 45%),
+      radial-gradient(ellipse at 90% 10%, rgba(126,191,122,0.06), transparent 40%),
+      var(--board);
+    color:var(--chalk);
+    font-family:'Space Grotesk', sans-serif;
+    padding:36px 28px 60px;
+  }
+  /* chalk dust texture */
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; opacity:0.05; mix-blend-mode:screen;
+    background-image:radial-gradient(circle at 10% 20%, #fff 0.5px, transparent 0.5px),
+                      radial-gradient(circle at 70% 60%, #fff 0.5px, transparent 0.5px),
+                      radial-gradient(circle at 40% 85%, #fff 0.5px, transparent 0.5px);
+    background-size:140px 140px, 190px 190px, 160px 160px;
+  }
+  .wrap{max-width:1180px; margin:0 auto; position:relative;}
+
+  /* header */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end; gap:20px;
+    border-bottom:2px dashed var(--rail); padding-bottom:22px; margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .eyebrow{
+    font-family:'Space Mono', monospace; font-size:12px; letter-spacing:0.18em;
+    color:var(--amber); text-transform:uppercase; margin:0 0 6px;
+  }
+  h1{
+    font-family:'Caveat', cursive; font-weight:700; font-size:56px; margin:0;
+    color:var(--chalk); line-height:0.95; letter-spacing:0.5px;
+  }
+  .subhead{color:var(--chalk-dim); font-size:14.5px; margin-top:8px; max-width:520px; line-height:1.5;}
+  .period-tag{
+    font-family:'Space Mono', monospace; font-size:13px; color:var(--board);
+    background:var(--amber); padding:7px 14px; border-radius:3px; white-space:nowrap;
+    transform:rotate(-2deg); box-shadow:2px 3px 0 rgba(0,0,0,0.25);
+  }
+
+  /* KPI row */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:32px;}
+  .kpi{
+    background:var(--board-2); border:1px solid var(--rail); border-radius:6px;
+    padding:18px 18px 16px; position:relative;
+  }
+  .kpi .label{
+    font-family:'Space Mono', monospace; font-size:10.5px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--chalk-dim); margin-bottom:10px;
+  }
+  .kpi .value{font-family:'Space Mono', monospace; font-size:30px; font-weight:700; color:var(--chalk); line-height:1;}
+  .kpi .value.up{color:var(--up);}
+  .kpi .value.down{color:var(--down);}
+  .kpi .foot{font-size:12px; color:var(--chalk-dim); margin-top:8px; line-height:1.4;}
+  .kpi .foot b{color:var(--chalk);}
+
+  /* section titles */
+  .section-title{
+    display:flex; align-items:baseline; gap:10px; margin:38px 0 16px;
+  }
+  .section-title h2{
+    font-family:'Caveat', cursive; font-size:30px; font-weight:700; margin:0; color:var(--amber);
+  }
+  .section-title .rule{flex:1; height:1px; background:repeating-linear-gradient(90deg,var(--rail) 0 6px, transparent 6px 11px);}
+  .section-note{font-size:12.5px; color:var(--chalk-dim); margin:-8px 0 16px;}
+
+  /* index chart card */
+  .card{background:var(--board-2); border:1px solid var(--rail); border-radius:6px; padding:20px;}
+  .chart-holder{height:280px;}
+
+  /* movers */
+  .movers{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .mover-col h3{
+    font-family:'Space Mono', monospace; font-size:11px; letter-spacing:0.1em; text-transform:uppercase;
+    margin:0 0 10px; padding-bottom:8px; border-bottom:1px solid var(--rail);
+  }
+  .mover-col.gainers h3{color:var(--up);}
+  .mover-col.losers h3{color:var(--down);}
+  .mover-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:9px 4px; border-bottom:1px dotted var(--rail); font-size:13.5px;
+  }
+  .mover-row:last-child{border-bottom:none;}
+  .mover-name{color:var(--chalk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .mover-pct{font-family:'Space Mono', monospace; font-weight:700; white-space:nowrap;}
+  .mover-pct.up{color:var(--up);}
+  .mover-pct.down{color:var(--down);}
+
+  /* table */
+  .table-controls{display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center;}
+  input[type="text"]{
+    background:var(--board); border:1px solid var(--rail); color:var(--chalk);
+    font-family:'Space Grotesk', sans-serif; font-size:13.5px; padding:9px 12px;
+    border-radius:4px; flex:1; min-width:200px; outline:none;
+  }
+  input[type="text"]::placeholder{color:var(--chalk-dim);}
+  input[type="text"]:focus{border-color:var(--amber);}
+  select{
+    background:var(--board); border:1px solid var(--rail); color:var(--chalk);
+    font-family:'Space Mono', monospace; font-size:12.5px; padding:9px 10px; border-radius:4px; outline:none;
+  }
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  thead th{
+    text-align:left; font-family:'Space Mono', monospace; font-size:10.5px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--chalk-dim); padding:10px 10px; border-bottom:1px solid var(--rail);
+    cursor:pointer; user-select:none; white-space:nowrap;
+  }
+  thead th:hover{color:var(--amber);}
+  tbody td{padding:10px 10px; border-bottom:1px solid rgba(75,69,54,0.4); vertical-align:middle;}
+  tbody tr:hover{background:rgba(224,185,74,0.05);}
+  td.name a{color:var(--chalk); text-decoration:none; border-bottom:1px dotted var(--chalk-dim);}
+  td.name a:hover{color:var(--amber); border-color:var(--amber);}
+  td.num{font-family:'Space Mono', monospace; text-align:right;}
+  td.pct{font-family:'Space Mono', monospace; text-align:right; font-weight:700;}
+  .na{color:var(--chalk-dim); font-style:italic;}
+  .badge{
+    display:inline-block; font-family:'Space Mono', monospace; font-size:11px; font-weight:700;
+    padding:2px 7px; border-radius:3px;
+  }
+  .badge.up{background:rgba(226,102,90,0.15); color:var(--up);}
+  .badge.down{background:rgba(127,191,122,0.15); color:var(--down);}
+  .badge.flat{background:rgba(141,145,132,0.15); color:var(--flat);}
+  .spark{width:70px; height:22px; display:block;}
+
+  footer{margin-top:40px; text-align:center; color:var(--chalk-dim); font-size:12px; font-family:'Space Mono', monospace;}
+
+  @media (max-width:820px){
+    .kpis{grid-template-columns:1fr 1fr;}
+    .movers{grid-template-columns:1fr;}
+    h1{font-size:42px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">bazarstore.az &middot; basket tracker</p>
+      <h1>Bazar Price Board</h1>
+      <p class="subhead">What 50 everyday grocery items actually cost, tracked across four snapshots this year — from bread and bananas to bottled water and bleach.</p>
+    </div>
+    <div class="period-tag">10 JAN → 10 JUL 2026</div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="section-title"><h2>The basket, over time</h2><div class="rule"></div></div>
+  <p class="section-note">Average price index for the 48 products with a full price history (Jan 10 = 100). Two seasonal ice-cream items are excluded — they weren't priced in July.</p>
+  <div class="card"><div class="chart-holder"><canvas id="indexChart"></canvas></div></div>
+
+  <div class="section-title"><h2>Biggest movers, Jan → Jul</h2><div class="rule"></div></div>
+  <p class="section-note">Ranked by percentage change. Flat-priced items (no change at all) are left off both lists.</p>
+  <div class="movers">
+    <div class="mover-col gainers"><h3>▲ Rose the most</h3><div id="gainersList"></div></div>
+    <div class="mover-col losers"><h3>▼ Fell the most</h3><div id="losersList"></div></div>
+  </div>
+
+  <div class="section-title"><h2>Full price ledger</h2><div class="rule"></div></div>
+  <div class="table-controls">
+    <input type="text" id="searchBox" placeholder="Search a product…">
+    <select id="sortSelect">
+      <option value="pct_desc">Sort: % change (high → low)</option>
+      <option value="pct_asc">Sort: % change (low → high)</option>
+      <option value="name_asc">Sort: name (A → Z)</option>
+      <option value="price_desc">Sort: current price (high → low)</option>
+      <option value="price_asc">Sort: current price (low → high)</option>
+    </select>
+  </div>
+  <div class="card" style="padding:6px 16px;">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th style="text-align:right;">Jan 10</th>
+          <th style="text-align:right;">Jul 10</th>
+          <th style="text-align:right;">Change</th>
+          <th>Trend</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <footer>Source: price_history.csv · bazarstore.az product listings · prices in AZN</footer>
+</div>
+
+<script>
+const RAW = [{"name": "BANAN KQ", "prices": [3.19, 3.49, 3.39, 2.99], "url": "https://bazarstore.az/products/banan-kq"}, {"name": "SİYƏZƏN D.T TƏZƏ FİLE AÇIQ KQ", "prices": [7.29, 7.29, 7.29, 7.29], "url": "https://bazarstore.az/products/siyezen-teze-file-aciq-kg"}, {"name": "SOĞAN YERLİ KQ", "prices": [0.49, 0.49, 0.49, 0.69], "url": "https://bazarstore.az/products/sogan-yerli%CC%87-kq"}, {"name": "SUN SALFET 150 Lİ MAXI", "prices": [1.1, 0.99, 0.99, 1.15], "url": "https://bazarstore.az/products/sun-salfet-150-li-maxi"}, {"name": "POMİDOR MUÇO KQ", "prices": [2.99, 4.69, 6.99, 1.39], "url": "https://bazarstore.az/products/pomi%CC%87dor-muco-kq"}, {"name": "MƏRCAN TƏZƏ TOYUQ PAKET KQ", "prices": [5.99, 6.49, 6.29, 6.39], "url": "https://bazarstore.az/products/m%C9%99rcan-t%C9%99z%C9%99-toyuq-paket-kq"}, {"name": "MİLLA SÜD 1 L 3,2% YAĞLI", "prices": [2.8, 2.8, 2.89, 2.89], "url": "https://bazarstore.az/products/milla-sud-1-l-3-2-yagli"}, {"name": "ÇÖRƏKÇİ BATON ÇÖRƏYİ 400 Q EKSTRA", "prices": [1.0, 1.0, 1.15, 1.15], "url": "https://bazarstore.az/products/corekci-baton-coreyi-400-q-ekstra"}, {"name": "SUN BAKERY SİMİT D/Q", "prices": [0.79, 0.85, 0.85, 0.85], "url": "https://bazarstore.az/products/sun-bakery-simit-d-q"}, {"name": "ALMA SMİRİNKA ENDİRİMLİ KQ", "prices": [2.49, 2.99, 3.49, 3.29], "url": "https://bazarstore.az/products/alma-smi%CC%87ri%CC%87nka-endi%CC%87ri%CC%87mli%CC%87-kq"}, {"name": "DOMESTOS TUALET TEMİZ GEL 750 ML AĞ", "prices": [3.19, 4.75, 4.75, 3.29], "url": "https://bazarstore.az/products/domestos-tualet-temiz-gel-750-ml-ag"}, {"name": "VENDS PİNQVİN PAKET 40 LI 25X35", "prices": [0.99, 0.99, 0.99, 0.99], "url": "https://bazarstore.az/products/vends-pinqvin-paket-40-li"}, {"name": "DOYMAK UN 2 KQ", "prices": [3.15, 3.15, 3.39, 3.4], "url": "https://bazarstore.az/products/doymak-un-2-kq"}, {"name": "ALMA QIRMIZI YERLİ  KQ", "prices": [0.79, 0.89, 1.39, 1.99], "url": "https://bazarstore.az/products/alma-qirmizi-yerli%CC%87-kq"}, {"name": "AZƏRSÜD KƏND QATIĞI 1 KQ", "prices": [3.69, 3.69, 2.99, 3.19], "url": "https://bazarstore.az/products/azersud-kend-qatigi-1-kq"}, {"name": "SULTAN BASMATİ DÜYÜ 1 KQ BANKA", "prices": [4.49, 5.65, 5.65, 4.99], "url": "https://bazarstore.az/products/sultan-basmati-duyu-1-kq-banka"}, {"name": "SİRAB SU 1 L QAZSIZ", "prices": [0.9, 0.9, 0.79, 1.0], "url": "https://bazarstore.az/products/sirab-su-1-l-qazsiz"}, {"name": "AURA MƏTBƏX DƏSMALI 4 ƏDƏD", "prices": [9.1, 9.1, 7.49, 5.69], "url": "https://bazarstore.az/products/aura-metbex-desmali-4-lu"}, {"name": "QAYMAQ KƏND QATIĞI 870 Q 3.2 %", "prices": [4.1, 4.1, 4.1, 4.1], "url": "https://bazarstore.az/products/qaymaq-kend-qatigi-870-q-3-2"}, {"name": "SİRAB SU 1.5 L QAZLI", "prices": [1.25, 1.25, 1.25, 1.4], "url": "https://bazarstore.az/products/sirab-su-1-5-l-qazli"}, {"name": "YURDUM KƏSMİK KQ", "prices": [7.29, 7.85, 7.99, 7.99], "url": "https://bazarstore.az/products/azersud-yurdum-k%C9%99smi%CC%87k-kg"}, {"name": "KARTOF PAKET EDED", "prices": [4.69, 5.19, 5.19, 4.49], "url": "https://bazarstore.az/products/kartof-paket-eded"}, {"name": "BONDUELLE ŞİRİN QARĞIDALI 212 Q TNK", "prices": [2.99, 2.99, 2.99, 2.69], "url": "https://bazarstore.az/products/bonduelle-sirin-qargidali-212-q-tnk"}, {"name": "SİRAB SU 1.5 L QAZSIZ", "prices": [0.95, 0.9, 1.05, 1.2], "url": "https://bazarstore.az/products/sirab-su-1-5-l-qazsiz"}, {"name": "SUN BAKERY BATON ÇÖRƏYİ ADİ", "prices": [0.75, 0.79, 0.69, 0.69], "url": "https://bazarstore.az/products/sun-bakery-adi%CC%87-baton-cor%C9%99yi%CC%87"}, {"name": "MİLLA SÜD AZ YAĞLI 1,5% 1 LT", "prices": [2.6, 2.29, 2.69, 2.69], "url": "https://bazarstore.az/products/milla-sud-1-l-az-yagli-1-5"}, {"name": "SIRAB SU 1 L QAZLI", "prices": [1.0, 1.0, 1.0, 1.2], "url": "https://bazarstore.az/products/sirab-su-1-l-qazli"}, {"name": "AURA MƏTBƏX DƏSMALI 2 ƏDƏD", "prices": [4.7, 4.7, 4.7, 4.99], "url": "https://bazarstore.az/products/aura-metbex-desmali-2-li"}, {"name": "PATRON GÜNƏBAXAN TUMU QARA 110 Q 4D", "prices": [0.89, 0.89, 1.19, 1.19], "url": "https://bazarstore.az/products/patron-gunebaxan-tumu-qara-110-q-4d"}, {"name": "BONAQUA SU 2 L QAZLI", "prices": [1.0, 1.0, 1.0, 1.1], "url": "https://bazarstore.az/products/bonaqua-su-2-l-qazli"}, {"name": "COCA COLA 330 ML BANKA", "prices": [1.4, 1.4, 1.4, 1.4], "url": "https://bazarstore.az/products/coca-cola-330-ml-banka"}, {"name": "SİRAB SU 500 ML QAZSIZ PET", "prices": [0.6, 0.6, 0.6, 0.7], "url": "https://bazarstore.az/products/sirab-su-500-ml-qazsiz-pet"}, {"name": "KENT BORINGER QABARTMA TOZU 10 Q", "prices": [0.15, 0.13, 0.13, 0.12], "url": "https://bazarstore.az/products/kent-boringer-qabartma-tozu-10-q"}, {"name": "SIRAB SU 500 ML QAZLI ŞÜŞƏ", "prices": [1.3, 1.3, 1.3, 1.4], "url": "https://bazarstore.az/products/sirab-su-500-ml-qazli-suse"}, {"name": "SUN BAKERY BULKA SADƏ D/Q", "prices": [0.59, 0.65, 0.65, 0.69], "url": "https://bazarstore.az/products/sun-bakery-bulka-sade-d-q"}, {"name": "MİLLA SÜD 0,1% 1 LT", "prices": [2.5, 2.5, 2.59, 2.59], "url": "https://bazarstore.az/products/milla-sud-1-l-0-1"}, {"name": "SİRAB SU 330 ML QAZSIZ", "prices": [0.5, 0.5, 0.5, 0.5], "url": "https://bazarstore.az/products/sirab-su-330-ml-qazsiz"}, {"name": "BORJOMI SODA 1 L PET", "prices": [2.69, 2.69, 2.09, 2.69], "url": "https://bazarstore.az/products/borjomi-soda-1-l-pet"}, {"name": "COCA COLA ZERO 330 ML BANKA", "prices": [1.4, 1.4, 1.4, 1.4], "url": "https://bazarstore.az/products/coca-cola-zero-330-ml-banka"}, {"name": "KINDER COUNTRY ŞOKOLAD 23.5 Q", "prices": [1.4, 1.4, 1.4, 1.4], "url": "https://bazarstore.az/products/kinder-country-sokolad-23-5-q"}, {"name": "ETİ MİNİ BROWNİ ADİCTO GOLD KAKAO 180 Q", "prices": [3.55, 3.55, 2.79, 3.55], "url": "https://bazarstore.az/products/eti-mini-browni-adicto-kakao-gold-180-gr"}, {"name": "BONAQUA SU 2 L QAZSIZ", "prices": [1.0, 1.0, 1.0, 1.1], "url": "https://bazarstore.az/products/bonaqua-su-2-l-qazsiz"}, {"name": "GÜLÜM SU 500 ML QAZSIZ", "prices": [0.3, 0.3, 0.3, 0.4], "url": "https://bazarstore.az/products/gulum-su-500-ml-qazsiz"}, {"name": "KENT NANOTEK İNFİNA 1", "prices": [4.8, 4.8, 4.8, 4.8], "url": "https://bazarstore.az/products/kent-nanotek-infn-0-1"}, {"name": "BORJOMİ SU 0.5L ŞÜŞƏ", "prices": [1.85, 2.05, 2.05, 2.05], "url": "https://bazarstore.az/products/borjomi-mineral-su-500-ml-qazli-suse"}, {"name": "BONAQUA SU 500 ML QAZSIZ", "prices": [0.4, 0.4, 0.4, 0.5], "url": "https://bazarstore.az/products/bonaqua-su-500-ml-qazsiz"}, {"name": "SOBRANİE BLUE", "prices": [5.1, 5.1, 5.1, 5.1], "url": "https://bazarstore.az/products/sobranie-blue"}, {"name": "MİLLA AYRAN 200 Q BUTULKA", "prices": [0.65, 0.65, 0.7, 0.7], "url": "https://bazarstore.az/products/milla-ayran-200-q-butulka"}, {"name": "A KLASS BAKI BULVARI DONDURMA 70 Q VANİL", "prices": [0.75, 0.75, 0.8, null], "url": "https://bazarstore.az/products/a-klass-dondurma-70-q-sade-vafli-stekan"}, {"name": "A KLASS BAKI BULVARI DONDURMA 70 Q KAKAO", "prices": [0.75, 0.75, 0.8, null], "url": "https://bazarstore.az/products/a-klass-dondurma-70-q-kakao-vafli-stekan"}];
+const dateLabels = ['Jan 10','Feb 10','Mar 10','Jul 10'];
+
+const products = RAW.map(p => {
+  const first = p.prices[0];
+  const lastIdx = p.prices.map((v,i)=>v!==null?i:-1).filter(i=>i>=0).pop();
+  const last = p.prices[lastIdx];
+  const hasFull = p.prices.every(v => v !== null);
+  const pct = (first !== null && last !== null && lastIdx > 0) ? ((last-first)/first*100) : null;
+  return {...p, first, last, lastIdx, hasFull, pct};
+});
+
+// ---- KPIs ----
+const fullSet = products.filter(p => p.hasFull);
+const jan = fullSet.reduce((s,p)=>s+p.prices[0],0);
+const jul = fullSet.reduce((s,p)=>s+p.prices[3],0);
+const basketPct = ((jul-jan)/jan*100);
+const rose = products.filter(p=>p.pct!==null && p.pct>0).length;
+const fell = products.filter(p=>p.pct!==null && p.pct<0).length;
+const flat = products.filter(p=>p.pct!==null && p.pct===0).length;
+const topGainer = [...products].filter(p=>p.pct!==null).sort((a,b)=>b.pct-a.pct)[0];
+const topLoser = [...products].filter(p=>p.pct!==null).sort((a,b)=>a.pct-b.pct)[0];
+
+const kpiHtml = `
+  <div class="kpi">
+    <div class="label">Basket index, Jan → Jul</div>
+    <div class="value ${basketPct>=0?'up':'down'}">${basketPct>=0?'+':''}${basketPct.toFixed(1)}%</div>
+    <div class="foot">Average of ${fullSet.length} fully-tracked items</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Price moves</div>
+    <div class="value">${rose} <span style="font-size:16px;color:var(--chalk-dim);">up</span></div>
+    <div class="foot"><b style="color:var(--down)">${fell}</b> fell &middot; <b>${flat}</b> unchanged</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Steepest rise</div>
+    <div class="value up" style="font-size:22px; line-height:1.3;">+${topGainer.pct.toFixed(0)}%</div>
+    <div class="foot"><b>${topGainer.name}</b><br>${topGainer.first.toFixed(2)} → ${topGainer.last.toFixed(2)} AZN</div>
+  </div>
+  <div class="kpi">
+    <div class="label">Steepest drop</div>
+    <div class="value down" style="font-size:22px; line-height:1.3;">${topLoser.pct.toFixed(0)}%</div>
+    <div class="foot"><b>${topLoser.name}</b><br>${topLoser.first.toFixed(2)} → ${topLoser.last.toFixed(2)} AZN</div>
+  </div>
+`;
+document.getElementById('kpis').innerHTML = kpiHtml;
+
+// ---- Index chart ----
+const idxByDate = [0,1,2,3].map(i => {
+  const avgRatio = fullSet.reduce((s,p)=>s+ (p.prices[i]/p.prices[0]), 0) / fullSet.length;
+  return avgRatio*100;
+});
+new Chart(document.getElementById('indexChart'), {
+  type:'line',
+  data:{
+    labels:dateLabels,
+    datasets:[{
+      label:'Basket price index',
+      data:idxByDate,
+      borderColor:'#e0b94a',
+      backgroundColor:'rgba(224,185,74,0.12)',
+      borderWidth:2.5,
+      pointBackgroundColor:'#e0b94a',
+      pointBorderColor:'#22261f',
+      pointRadius:5,
+      pointHoverRadius:7,
+      fill:true,
+      tension:0.25
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        backgroundColor:'#282d24', borderColor:'#4b4536', borderWidth:1,
+        titleFont:{family:'Space Mono'}, bodyFont:{family:'Space Mono'},
+        callbacks:{ label: ctx => `Index: ${ctx.parsed.y.toFixed(1)}` }
+      }
+    },
+    scales:{
+      x:{ ticks:{color:'#b9b6a9', font:{family:'Space Mono', size:11}}, grid:{color:'rgba(75,69,54,0.4)'} },
+      y:{ ticks:{color:'#b9b6a9', font:{family:'Space Mono', size:11}}, grid:{color:'rgba(75,69,54,0.4)'}, suggestedMin:95 }
+    }
+  }
+});
+
+// ---- Movers ----
+function moverRow(p, cls){
+  return `<div class="mover-row">
+    <span class="mover-name" title="${p.name}">${p.name}</span>
+    <span class="mover-pct ${cls}">${p.pct>0?'+':''}${p.pct.toFixed(0)}%</span>
+  </div>`;
+}
+const gainers = [...products].filter(p=>p.pct!==null && p.pct>0).sort((a,b)=>b.pct-a.pct).slice(0,8);
+const losers = [...products].filter(p=>p.pct!==null && p.pct<0).sort((a,b)=>a.pct-b.pct).slice(0,8);
+document.getElementById('gainersList').innerHTML = gainers.map(p=>moverRow(p,'up')).join('');
+document.getElementById('losersList').innerHTML = losers.map(p=>moverRow(p,'down')).join('');
+
+// ---- Table ----
+function sparkline(prices){
+  const vals = prices.map(v=>v===null?null:v);
+  const valid = vals.filter(v=>v!==null);
+  if(valid.length<2) return '';
+  const min = Math.min(...valid), max = Math.max(...valid);
+  const w=70,h=22,pad=2;
+  const n = vals.length;
+  let points = [];
+  vals.forEach((v,i)=>{
+    if(v===null) return;
+    const x = pad + (i/(n-1))*(w-2*pad);
+    const y = max===min ? h/2 : h-pad-((v-min)/(max-min))*(h-2*pad);
+    points.push([x,y]);
+  });
+  const path = points.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const lastUp = valid[valid.length-1] >= valid[0];
+  const color = lastUp ? '#e2665a' : '#7fbf7a';
+  const dots = points.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="1.6" fill="${color}"/>`).join('');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.6"/>${dots}</svg>`;
+}
+
+function badge(pct){
+  if(pct===null) return `<span class="na">n/a</span>`;
+  if(pct>0) return `<span class="badge up">+${pct.toFixed(1)}%</span>`;
+  if(pct<0) return `<span class="badge down">${pct.toFixed(1)}%</span>`;
+  return `<span class="badge flat">0.0%</span>`;
+}
+
+function renderTable(list){
+  const body = list.map(p => `
+    <tr>
+      <td class="name"><a href="${p.url}" target="_blank" rel="noopener">${p.name}</a></td>
+      <td class="num">${p.first.toFixed(2)}</td>
+      <td class="num">${p.last===null?'<span class=\"na\">n/a</span>':p.last.toFixed(2)}</td>
+      <td class="pct">${badge(p.pct)}</td>
+      <td>${sparkline(p.prices)}</td>
+    </tr>
+  `).join('');
+  document.getElementById('tableBody').innerHTML = body;
+}
+
+function applyFilters(){
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const sortMode = document.getElementById('sortSelect').value;
+  let list = products.filter(p => p.name.toLowerCase().includes(q));
+  switch(sortMode){
+    case 'pct_desc': list.sort((a,b)=>(b.pct??-999)-(a.pct??-999)); break;
+    case 'pct_asc': list.sort((a,b)=>(a.pct??999)-(b.pct??999)); break;
+    case 'name_asc': list.sort((a,b)=>a.name.localeCompare(b.name)); break;
+    case 'price_desc': list.sort((a,b)=>(b.last??b.first)-(a.last??a.first)); break;
+    case 'price_asc': list.sort((a,b)=>(a.last??a.first)-(b.last??b.first)); break;
+  }
+  renderTable(list);
+}
+document.getElementById('searchBox').addEventListener('input', applyFilters);
+document.getElementById('sortSelect').addEventListener('change', applyFilters);
+applyFilters();
+</script>
+</body>
+</html>
