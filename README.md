@@ -14,17 +14,36 @@ Tracked 50 grocery items across 4 snapshots (Jan 10, Feb 10, Mar 10, Jul 10, 202
 - **10 of 50 products** had zero price change (e.g. Coca-Cola, Kinder Country)
 - Fresh produce was the most volatile category; packaged/branded goods stayed stable
 
-📊 [View interactive dashboard](#) *(add your link here)*
+📊 [Interactive dashboard for analyzing prices.](price_scraper_bazarstore/bazar_price_dashboard.html)
 
 ---
 
 ## 📁 Files
 
-1. **collect_urls.py** - Run ONCE to collect product URLs
-2. **monthly_price_tracker.py** - Run MONTHLY to update prices
-3. **product_urls.txt** - Stores product URLs (created by collect_urls.py)
-4. **price_history.csv** - Your price tracking data (created/updated by monthly_price_tracker.py)
+1. **[collect_urls.py](price_scraper_bazarstore/collect_urls.py)** - Run ONCE to collect product URLs
+2. **[monthly_price_tracker.py](price_scraper_bazarstore/monthly_price_tracker.py)** - Run MONTHLY to update prices
+3. **[product_urls.txt](price_scraper_bazarstore/product_urls.txt)** - Stores product URLs (created by collect_urls.py)
+4. **[price_history.csv](price_scraper_bazarstore/price_history.csv)** - Your price tracking data (created/updated by monthly_price_tracker.py)
+---
 
+## 🛠️ Tools & Technologies Used
+
+* **Python 3.8+** - Programming language
+* **Requests** - HTTP library for web requests
+* **BeautifulSoup4** - HTML parsing and web scraping
+* **Pandas** - Data processing and CSV handling
+* **Chart.js** - Interactive dashboard charts
+* **Git/GitHub** - Version control and repository hosting
+
+### 📋 Requirements & Dependencies
+
+To run the scripts, make sure you have the following Python packages installed:
+
+```text
+requests == 2.31.0
+beautifulsoup4 == 4.12.2
+pandas == 2.1.1
+```
 ---
 
 ## 🚀 How to Use
@@ -236,14 +255,6 @@ After 6 months, you'll have complete price history!
 3. ✅ Backup `price_history.csv` before each run
 4. ✅ Respect the website with appropriate delays (3+ seconds)
 5. ✅ Check for failed scrapes and investigate why
-
----
-
-## 📞 Need Help?
-
-- Check website structure with: `python bazarstore_inspector.py`
-- Clean duplicate data with: `python cleanup_csv.py`
-- Review robots.txt compliance
 
 ---
 
