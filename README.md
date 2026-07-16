@@ -14,7 +14,7 @@ Tracked 50 grocery items across 4 snapshots (Jan 10, Feb 10, Mar 10, Jul 10, 202
 - **10 of 50 products** had zero price change (e.g. Coca-Cola, Kinder Country)
 - Fresh produce was the most volatile category; packaged/branded goods stayed stable
 
-📊 [Interactive dashboard for analyzing prices.](price_scraper_bazarstore/bazar_price_dashboard.html)
+📊 [Interactive dashboard for analyzing prices.](https://aliyev-huseyn.github.io/market_prices_analysis/price_scraper_bazarstore/bazar_price_dashboard.html)
 
 ---
 
